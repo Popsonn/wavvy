@@ -26,6 +26,7 @@ interface CandidateData {
   location_confirmed?: boolean;
   consent_given: boolean;
   consent_timestamp: string;
+  question_order: number[];
   registered_at: string;
   recordings?: Recording[];
   results?: InterviewResults;

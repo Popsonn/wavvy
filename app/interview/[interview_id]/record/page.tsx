@@ -9,6 +9,10 @@ interface InterviewData {
   questions: string[];
 }
 
+interface CandidateData {
+  question_order: number[];
+}
+
 export default function RecordPage({
   params,
 }: {
@@ -24,6 +28,7 @@ export default function RecordPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [interview, setInterview] = useState<InterviewData | null>(null);
+  const [candidate, setCandidate] = useState<CandidateData | null>(null);
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -39,18 +44,28 @@ export default function RecordPage({
   }, [candidateId, interview_id, router]);
 
   useEffect(() => {
-    async function fetchInterview() {
+    async function fetchData() {
       try {
-        const response = await fetch(`/api/interview/${interview_id}`);
-        
-        if (!response.ok) {
+        // Fetch interview
+        const interviewResponse = await fetch(`/api/interview/${interview_id}`);
+        if (!interviewResponse.ok) {
           throw new Error('Interview not found');
         }
-        
-        const data = await response.json();
-        setInterview(data);
+        const interviewData = await interviewResponse.json();
+        setInterview(interviewData);
+
+        // Fetch candidate data (to get question order)
+        const candidateResponse = await fetch(
+          `/api/interview/${interview_id}/candidate?candidate_id=${candidateId}`
+        );
+        if (!candidateResponse.ok) {
+          throw new Error('Candidate not found');
+        }
+        const candidateData = await candidateResponse.json();
+        setCandidate(candidateData);
+
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load interview';
+        const message = err instanceof Error ? err.message : 'Failed to load data';
         setError(message);
       } finally {
         setLoading(false);
@@ -58,7 +73,7 @@ export default function RecordPage({
     }
     
     if (candidateId) {
-      fetchInterview();
+      fetchData();
     }
   }, [interview_id, candidateId]);
 
@@ -75,12 +90,12 @@ export default function RecordPage({
     setResetTrigger(prev => prev + 1);
   };
 
-  const uploadVideo = async (blob: Blob, questionIndex: number): Promise<boolean> => {
+  const uploadVideo = async (blob: Blob, originalQuestionIndex: number): Promise<boolean> => {
     try {
       const formData = new FormData();
-      formData.append('video', blob, `question-${questionIndex}.webm`);
+      formData.append('video', blob, `question-${originalQuestionIndex}.webm`);
       formData.append('candidate_id', candidateId!);
-      formData.append('question_index', questionIndex.toString());
+      formData.append('question_index', originalQuestionIndex.toString());
 
       const response = await fetch(`/api/interview/${interview_id}/upload`, {
         method: 'POST',
@@ -102,18 +117,19 @@ export default function RecordPage({
   };
 
   const handleNext = async () => {
-    if (!recordedBlob || !candidateId || !interview) return;
+    if (!recordedBlob || !candidateId || !interview || !candidate) return;
 
     setUploading(true);
     setError('');
     setBackgroundUploadError('');
 
     const currentBlob = recordedBlob;
-    const currentIndex = currentQuestionIndex;
-    const isLastQuestion = currentQuestionIndex >= interview.questions.length - 1;
+    const questionOrder = candidate.question_order || [];
+    const originalQuestionIndex = questionOrder[currentQuestionIndex];
+    const isLastQuestion = currentQuestionIndex >= questionOrder.length - 1;
 
     if (isLastQuestion) {
-      const uploadSuccess = await uploadVideo(currentBlob, currentIndex);
+      const uploadSuccess = await uploadVideo(currentBlob, originalQuestionIndex);
       
       if (uploadSuccess) {
         router.push(`/interview/${interview_id}/complete?candidate_id=${candidateId}`);
@@ -126,10 +142,10 @@ export default function RecordPage({
       setRecordedBlob(null);
       setUploading(false);
 
-      uploadVideo(currentBlob, currentIndex).then(success => {
+      uploadVideo(currentBlob, originalQuestionIndex).then(success => {
         if (!success) {
           setBackgroundUploadError(
-            `Question ${currentIndex + 1} upload failed. Retrying in background...`
+            `Question ${currentQuestionIndex + 1} upload failed. Retrying in background...`
           );
         }
       });
@@ -165,10 +181,14 @@ export default function RecordPage({
     );
   }
 
-  if (!interview) return null;
+  if (!interview || !candidate) return null;
 
-  const currentQuestion = interview.questions[currentQuestionIndex];
-  const totalQuestions = interview.questions.length;
+  // Get questions in randomized order
+  const questionOrder = candidate.question_order || 
+    Array.from({ length: interview.questions.length }, (_, i) => i); // Fallback for backward compatibility
+  
+  const currentQuestion = interview.questions[questionOrder[currentQuestionIndex]];
+  const totalQuestions = questionOrder.length;
   const progress = ((uploadedCount) / totalQuestions) * 100;
 
   return (
@@ -229,6 +249,10 @@ export default function RecordPage({
               <p className="text-sm text-gray-600 mt-3 flex items-start">
                 <span className="mr-2 mt-0.5">💡</span>
                 <span>Tip: Take your time to think before recording. You have up to 3 minutes per question.</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-2 flex items-start">
+                <span className="mr-2 mt-0.5">🔀</span>
+                <span>Questions are presented in random order to ensure fairness</span>
               </p>
             </div>
 
