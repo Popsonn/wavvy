@@ -168,7 +168,7 @@ Wait 3-5 minutes for AI processing, then:
 
 If you haven't configured Resend:
 - Results still save to database and Google Sheets
-- Access results directly via `/interview/[id]/results` URL
+- Access results directly via https://docs.google.com/spreadsheets/d/15B21-6XSPeTwNsCuuil0p141ly1z3IjltDgmnshLiKM/edit?gid=0#gid=0 (on request only)
 - Email notifications will fail silently (check console logs)
 
 ## 📁 Project Structure
