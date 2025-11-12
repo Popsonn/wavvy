@@ -11,7 +11,7 @@ AI-powered video interview platform for recruiters and candidates.
 
 ## 🚀 Live Demo
 
-**Deployed App:** [https://wavvy-interview-5x9a22e6g-popsons-projects.vercel.app/]
+**Deployed App:** [https://wavvy-opal.vercel.app/]
 
 **Test Credentials:**
 - Recruiter email for testing: `[popsondebby@gmail.com]`
@@ -139,7 +139,8 @@ WAVVY-MVP/
 │   ├── roleMapper.ts
 │   ├── scoring.ts
 │   ├── sheets.ts
-│   └── transcription.ts
+│   ├── transcription.ts
+│   └── utils.ts
 ├── node_modules/
 ├── public/
 ├── .env.example

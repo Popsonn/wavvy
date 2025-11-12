@@ -23,6 +23,7 @@ interface QuestionScore {
   reasoning: string;
   strengths: string[];
   weaknesses: string[];
+  experienceGapNote?: string;
 }
 
 interface OverallResult {
@@ -191,10 +192,6 @@ export async function scoreInterview(
   return await generateOverallFeedback(questionScores, jobContext, candidateContext);
 }
 
-// ============================================================================
-// CHANGED: Separated candidate level derivation from job seniority
-// This keeps job requirements separate from candidate experience
-// ============================================================================
 function getCandidateLevel(yearsExperience: number): string {
   if (yearsExperience < 1) return 'Entry-level';
   if (yearsExperience < 3) return 'Junior';
@@ -203,11 +200,15 @@ function getCandidateLevel(yearsExperience: number): string {
   return 'Lead/Manager';
 }
 
-// ============================================================================
-// CHANGED: Renamed from getExperienceAdjustment to getSeniorityExpectations
-// Now focuses on JOB requirements, not candidate experience
-// Takes the actual job seniority string and normalizes it
-// ============================================================================
+function getTypicalYearsForLevel(seniority: string): number {
+  const level = seniority?.toLowerCase() || '';
+  if (level.includes('entry')) return 0;
+  if (level.includes('junior')) return 1;
+  if (level.includes('senior')) return 5;
+  if (level.includes('lead') || level.includes('manager')) return 8;
+  return 3;
+}
+
 function getSeniorityExpectations(seniority: string): string {
   const level = seniority?.toLowerCase() || '';
   
@@ -223,14 +224,9 @@ function getSeniorityExpectations(seniority: string): string {
   if (level.includes('lead') || level.includes('manager')) {
     return 'For Lead/Manager roles: Expect strategic vision, team leadership, cross-functional collaboration, and business impact. Candidates should demonstrate ability to drive results through others.';
   }
-  // Default to Mid-level
   return 'For Mid-level roles: Balance solid fundamentals with growing strategic thinking. Candidates should demonstrate independence on routine tasks and ability to handle complex challenges with minimal guidance.';
 }
 
-// ============================================================================
-// CHANGED: Added function to detect and describe level mismatch
-// This helps the LLM understand when candidate experience doesn't align with job
-// ============================================================================
 function getLevelMismatchGuidance(
   jobSeniority: string,
   candidateLevel: string,
@@ -239,7 +235,6 @@ function getLevelMismatchGuidance(
   const jobLevel = jobSeniority?.toLowerCase() || 'mid-level';
   const candLevel = candidateLevel.toLowerCase();
   
-  // Normalize for comparison
   const jobRank = getRankFromLevel(jobLevel);
   const candRank = getRankFromLevel(candLevel);
   
@@ -251,24 +246,18 @@ function getLevelMismatchGuidance(
     return `Note: This is a ${jobSeniority} role, but the candidate has ${yearsExperience} years of experience (${candidateLevel} level). Evaluate against ${jobSeniority}-level expectations, but consider whether their answers demonstrate the depth expected for this role OR show strong potential to grow into it with mentorship.`;
   }
   
-  // Candidate is overqualified
   return `Note: The candidate has ${yearsExperience} years of experience (${candidateLevel} level) applying for a ${jobSeniority} role. Evaluate against ${jobSeniority}-level expectations, noting where they exceed requirements.`;
 }
 
-// Helper function to rank levels for comparison
 function getRankFromLevel(level: string): number {
   if (level.includes('entry')) return 1;
   if (level.includes('junior')) return 2;
   if (level.includes('mid')) return 3;
   if (level.includes('senior')) return 4;
   if (level.includes('lead') || level.includes('manager')) return 5;
-  return 3; // Default to mid-level
+  return 3;
 }
 
-// ============================================================================
-// CHANGED: Completely refactored prompt to separate job vs candidate context
-// Now explicitly presents both without merging them
-// ============================================================================
 function buildScoringPrompt(
   question: string,
   transcript: string,
@@ -277,6 +266,8 @@ function buildScoringPrompt(
 ): string {
   const jobSeniority = jobContext.seniority || 'Mid-level';
   const candidateLevel = getCandidateLevel(candidateContext.yearsExperience);
+  const typicalYears = getTypicalYearsForLevel(jobSeniority);
+  const experienceGap = candidateContext.yearsExperience - typicalYears;
   
   const responsibilities = jobContext.keyResponsibilities && jobContext.keyResponsibilities.length > 0
     ? jobContext.keyResponsibilities.slice(0, 4).join('\n- ')
@@ -285,11 +276,14 @@ function buildScoringPrompt(
     ? jobContext.requiredSkills.slice(0, 5).join(', ')
     : 'General professional skills';
 
+  const shouldIncludeGapNote = experienceGap < -2 || experienceGap > 3;
+
   return `You are an expert interviewer evaluating a candidate's response for a ${jobSeniority} ${jobContext.jobTitle} position.
 
 ROLE REQUIREMENTS:
 Job Title: ${jobContext.jobTitle}
 Seniority Level: ${jobSeniority}
+Typical Years of Experience: ${typicalYears}+ years
 ${jobContext.industry ? `Industry: ${jobContext.industry}` : ''}
 Role Type: ${jobContext.roleTemplate || 'Professional role'}
 
@@ -304,6 +298,7 @@ ${getSeniorityExpectations(jobSeniority)}
 CANDIDATE PROFILE:
 Years of Experience: ${candidateContext.yearsExperience}
 Candidate Level: ${candidateLevel}
+Experience Gap: ${experienceGap >= 0 ? '+' : ''}${experienceGap} years relative to typical (${experienceGap < -2 ? 'significantly below' : experienceGap > 3 ? 'significantly above' : 'aligned'})
 
 ${getLevelMismatchGuidance(jobSeniority, candidateLevel, candidateContext.yearsExperience)}
 
@@ -349,10 +344,16 @@ EVALUATION GUIDELINES:
 - The candidate has ${candidateContext.yearsExperience} years of experience - note in your reasoning if they demonstrate capabilities beyond or below what's typical for their experience level
 - Be fair but maintain the standards expected for a ${jobSeniority} role
 
+EDGE CASE HANDLING:
+- Very brief answers (under 20 words): Score 0 unless it's a complete, appropriately concise answer to a simple question
+- "I don't know" responses: Score 0, but note if the candidate attempted to reason through the problem or showed related knowledge
+- Off-topic answers: Score 1 if they demonstrate relevant competencies even while missing the question; Score 0 if completely irrelevant
+- Unclear/garbled transcripts: If the answer is difficult to understand due to transcription quality, note this in your reasoning and score based on what can be understood
+
 Provide your evaluation in JSON format:
 {
   "score": 0-2,
-  "reasoning": "2-3 sentences explaining the score, referencing specific strengths or gaps in the answer relative to ${jobSeniority}-level expectations",
+  "reasoning": "2-3 sentences explaining the score relative to ${jobSeniority}-level expectations. Focus on what they did well or poorly in their answer."${shouldIncludeGapNote ? `,\n  "experienceGapNote": "1-2 sentences evaluating whether their ${candidateContext.yearsExperience} years of experience (${experienceGap >= 0 ? '+' : ''}${experienceGap} years relative to typical ${typicalYears}+ for this role) is sufficient for current readiness in this ${jobSeniority} role. If they fall short of readiness, state what additional experience or skills they need. If their performance suggests they could reach readiness with focused development, note that but be realistic about timeline and effort required."` : ''},
   "strengths": ["specific strength 1", "specific strength 2"],
   "weaknesses": ["specific weakness 1", "specific weakness 2"]
 }
@@ -360,9 +361,6 @@ Provide your evaluation in JSON format:
 Focus on being fair, objective, and constructive. Your feedback should help the candidate understand what they did well and where they can improve.`;
 }
 
-// ============================================================================
-// CHANGED: Updated feedback prompt with same separation of concerns
-// ============================================================================
 function buildFeedbackPrompt(
   questionScores: QuestionScore[],
   jobContext: JobContext,
@@ -385,7 +383,7 @@ function buildFeedbackPrompt(
       return `Question ${i + 1}: ${q.question}
 Score: ${q.score}/2
 Answer: "${q.transcript.substring(0, 150)}${q.transcript.length > 150 ? '...' : ''}"
-Evaluation: ${q.reasoning}`;
+Evaluation: ${q.reasoning}${q.experienceGapNote ? `\nExperience Gap Note: ${q.experienceGapNote}` : ''}`;
     })
     .join('\n\n');
 
@@ -444,7 +442,7 @@ Based on this complete interview performance, provide comprehensive feedback tha
    - Be constructive and professional
    - Focus on areas that would help them succeed in this role or advance their career
 
-IMPORTANT:
+CRITICAL SAFEGUARDS:
 - Base your feedback on their ACTUAL answers and performance, not assumptions
 - Evaluate primarily against ${jobSeniority}-level expectations for this role
 - Reference the role's specific requirements (responsibilities and skills listed above)
@@ -452,6 +450,7 @@ IMPORTANT:
 - If they struggled with questions about required skills, note that as an area to improve
 - Be honest about whether their ${candidateContext.yearsExperience} years of experience translates to readiness for this ${jobSeniority} role
 - Make feedback specific to THIS role, not generic interview feedback
+- **ONLY provide feedback on competencies and skills that were actually tested in the interview questions above. Do not list required skills as "areas to improve" if they were never assessed in any question. If a skill wasn't tested, do not mention it in the feedback.**
 
 Respond in JSON format:
 {
@@ -474,8 +473,17 @@ function normalizeScoreResult(
   const weaknesses = Array.isArray(evaluation.weaknesses)
     ? evaluation.weaknesses.slice(0, 3)
     : [];
+  const experienceGapNote = evaluation.experienceGapNote || undefined;
 
-  return { question, transcript, score, reasoning, strengths, weaknesses };
+  return { 
+    question, 
+    transcript, 
+    score, 
+    reasoning, 
+    strengths, 
+    weaknesses,
+    ...(experienceGapNote && { experienceGapNote })
+  };
 }
 
 function createFallbackFeedback(questionScores: QuestionScore[]): OverallResult {

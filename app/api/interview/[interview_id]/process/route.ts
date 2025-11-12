@@ -67,7 +67,6 @@ export async function POST(
 
     const transcripts = await transcribeMultipleVideos(videoUrls);
 
-    // ✅ Enhanced scoring with full context
     const scoringResult = await scoreInterview(
       interview.questions,
       transcripts,
@@ -81,7 +80,7 @@ export async function POST(
       },
       {
         yearsExperience: candidate.years_experience,
-        candidateName: candidate.name, // Optional: for personalized feedback
+        candidateName: candidate.name,
       }
     );
 
