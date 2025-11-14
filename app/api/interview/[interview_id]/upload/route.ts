@@ -1,67 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { saveRecording, getCandidate } from '@/lib/db';
- 
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ interview_id: string }> }
 ) {
   try {
     const { interview_id } = await params;
-   
-    const formData = await req.formData();
-    const videoFile = formData.get('video') as File;
-    const candidateId = formData.get('candidate_id') as string;
-    const questionIndex = parseInt(formData.get('question_index') as string);
- 
-    if (!videoFile) {
-      return NextResponse.json(
-        { error: 'Video file is required' },
-        { status: 400 }
-      );
-    }
- 
-    if (!candidateId) {
-      return NextResponse.json(
-        { error: 'Candidate ID is required' },
-        { status: 400 }
-      );
-    }
- 
-    if (isNaN(questionIndex)) {
-      return NextResponse.json(
-        { error: 'Invalid question index' },
-        { status: 400 }
-      );
-    }
- 
-    const candidate = await getCandidate(interview_id, candidateId);
-    if (!candidate) {
-      return NextResponse.json(
-        { error: 'Candidate not found' },
-        { status: 404 }
-      );
-    }
- 
-    const filename = `interviews/${interview_id}/${candidateId}/question-${questionIndex}.webm`;
-   
-    const blob = await put(filename, videoFile, {
-      access: 'public',
-      addRandomSuffix: false,
+    const body = await req.json() as HandleUploadBody;
+
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
+      onBeforeGenerateToken: async (pathname) => {
+        // Validate the upload request
+        const { searchParams } = new URL(req.url);
+        const candidateId = searchParams.get('candidate_id');
+        const questionIndex = searchParams.get('question_index');
+
+        if (!candidateId) {
+          throw new Error('Candidate ID is required');
+        }
+
+        const candidate = await getCandidate(interview_id, candidateId);
+        if (!candidate) {
+          throw new Error('Candidate not found');
+        }
+
+        return {
+          allowedContentTypes: ['video/webm', 'video/mp4'],
+          tokenPayload: JSON.stringify({
+            interview_id,
+            candidate_id: candidateId,
+            question_index: questionIndex,
+          }),
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        // Save recording metadata after successful upload
+        try {
+          const payload = JSON.parse(tokenPayload || '{}');
+          
+          await saveRecording(
+            payload.interview_id,
+            payload.candidate_id,
+            {
+              question_index: parseInt(payload.question_index),
+              video_url: blob.url,
+              duration: 0,
+              uploaded_at: new Date().toISOString(),
+            }
+          );
+        } catch (error) {
+          console.error('Failed to save recording metadata:', error);
+        }
+      },
     });
- 
-    await saveRecording(interview_id, candidateId, {
-      question_index: questionIndex,
-      video_url: blob.url,
-      duration: 0,
-      uploaded_at: new Date().toISOString(),
-    });
- 
-    return NextResponse.json({
-      success: true,
-      video_url: blob.url,
-      question_index: questionIndex,
-    });
+
+    return NextResponse.json(jsonResponse);
   } catch (error: any) {
     console.error('Upload error:', error);
     return NextResponse.json(
@@ -70,7 +70,7 @@ export async function POST(
     );
   }
 }
- 
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ interview_id: string }> }

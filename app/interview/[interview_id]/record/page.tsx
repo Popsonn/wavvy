@@ -92,24 +92,21 @@ export default function RecordPage({
 
   const uploadVideo = async (blob: Blob, originalQuestionIndex: number): Promise<boolean> => {
     try {
-      const formData = new FormData();
-      formData.append('video', blob, `question-${originalQuestionIndex}.webm`);
-      formData.append('candidate_id', candidateId!);
-      formData.append('question_index', originalQuestionIndex.toString());
-
-      const response = await fetch(`/api/interview/${interview_id}/upload`, {
-        method: 'POST',
-        body: formData,
+      const filename = `interviews/${interview_id}/${candidateId}/question-${originalQuestionIndex}.webm`;
+      
+      // Use client-side upload
+      const { upload } = await import('@vercel/blob/client');
+      
+      const newBlob = await upload(filename, blob, {
+        access: 'public',
+        handleUploadUrl: `/api/interview/${interview_id}/upload?candidate_id=${candidateId}&question_index=${originalQuestionIndex}`,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
-
+      console.log('Upload successful:', newBlob.url);
       setUploadedCount(prev => prev + 1);
       return true;
     } catch (err) {
+      console.error('Upload error:', err);
       const message = err instanceof Error ? err.message : 'Upload failed';
       setBackgroundUploadError(message);
       return false;
@@ -185,7 +182,7 @@ export default function RecordPage({
 
   // Get questions in randomized order
   const questionOrder = candidate.question_order || 
-    Array.from({ length: interview.questions.length }, (_, i) => i); // Fallback for backward compatibility
+    Array.from({ length: interview.questions.length }, (_, i) => i); 
   
   const currentQuestion = interview.questions[questionOrder[currentQuestionIndex]];
   const totalQuestions = questionOrder.length;
