@@ -18,6 +18,13 @@ interface InterviewConfig {
   num_questions: number;
 }
 
+function getBaseUrl(): string {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+}
+
 export async function POST(req: NextRequest) {
   try {
     const config: InterviewConfig = await req.json();
@@ -49,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     const interviewId = crypto.randomUUID().slice(0, 8);
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl();
     const interviewLink = `${baseUrl}/interview/${interviewId}`;
 
     await saveInterview(interviewId, {
