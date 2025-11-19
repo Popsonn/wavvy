@@ -444,15 +444,27 @@ export default function Home() {
               </div>
             </div>
 
+            {/* UPDATED SECTION - Enhanced UI with original placeholder format */}
             <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700">Additional Custom Questions (Optional)</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Standard Interview Questions <span className="text-gray-500 font-normal">(Recommended)</span>
+              </label>
+
+              <p className="text-sm text-gray-600 mb-3">
+                Add opening questions to make the interview feel complete and natural.
+              </p>
+
               <textarea
                 value={formData.custom_questions}
                 onChange={(e) => setFormData({...formData, custom_questions: e.target.value})}
-                className="w-full border-2 border-gray-200 p-3 rounded-lg focus:ring-2 focus:ring-[#667eea] focus:border-transparent transition-all"
-                rows={3}
-                placeholder="Any specific questions not covered above?"
+                className="w-full border-2 border-gray-200 p-4 rounded-lg focus:ring-2 focus:ring-[#667eea] focus:border-transparent transition-all"
+                rows={8}
+                placeholder="Tell me about yourself.&#10;&#10;Why are you interested in this role and our company?&#10;&#10;Walk me through your relevant experience.&#10;&#10;What are your greatest strengths and how would they benefit our team?&#10;&#10;Tell me about a challenge you faced at work and how you overcame it.&#10;&#10;Do you have any questions for us?"
               />
+              
+              <p className="text-xs text-gray-500 mt-2">
+                💡 One question per line • Added to AI-generated questions
+              </p>
             </div>
 
             {error && (

@@ -59,6 +59,42 @@ export async function POST(
       );
     }
 
+    // CHECK FOR INCOMPLETE INTERVIEW
+    const expectedCount = interview.questions.length;
+    const actualCount = recordings.length;
+
+    if (actualCount < expectedCount) {
+      // Identify missing questions
+      const missing = [];
+      for (let i = 0; i < expectedCount; i++) {
+        const hasRecording = recordings.some(r => r.question_index === i);
+        if (!hasRecording) {
+          missing.push(i + 1);
+        }
+      }
+      
+      console.warn(
+        `⚠️ INCOMPLETE INTERVIEW - Interview: ${interview_id}, ` +
+        `Candidate: ${candidate_id} (${candidate.name}), ` +
+        `Missing Q${missing.join(', Q')}`
+      );
+      
+      // Return error with detailed info
+      return NextResponse.json({
+        error: 'Incomplete interview',
+        message: `This interview is missing recordings for ${missing.length} question(s).`,
+        details: {
+          expectedQuestions: expectedCount,
+          receivedQuestions: actualCount,
+          missingQuestions: missing,
+          candidateName: candidate.name,
+          candidateEmail: candidate.email,
+          jobTitle: interview.job_title,
+        },
+        recommendation: 'Contact the candidate to re-record the missing questions.',
+      }, { status: 400 });
+    }
+
     const sortedRecordings = recordings.sort(
       (a, b) => a.question_index - b.question_index
     );

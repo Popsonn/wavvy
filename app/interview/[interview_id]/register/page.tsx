@@ -154,7 +154,7 @@ export default function RegisterPage({
       }
 
       const { candidate_id } = await response.json();
-      router.push(`/interview/${interview_id}/record?candidate_id=${candidate_id}`);
+      router.push(`/interview/${interview_id}/preview?candidate_id=${candidate_id}`);
       
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to submit registration';

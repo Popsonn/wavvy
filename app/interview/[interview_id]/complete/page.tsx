@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 interface CandidateData {
   name: string;
@@ -24,7 +24,6 @@ export default function CompletePage({
   const unwrappedParams = use(params);
   const interview_id = unwrappedParams.interview_id;
 
-  const router = useRouter();
   const searchParams = useSearchParams();
   const candidateId = searchParams.get('candidate_id');
   
@@ -228,14 +227,7 @@ export default function CompletePage({
             </p>
           </div>
 
-          <button
-            onClick={() => router.push('/')}
-            className="w-full px-6 py-4 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-lg font-semibold rounded-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-100 shadow-lg"
-          >
-            Return to Home
-          </button>
-
-          <p className="text-sm text-gray-500 mt-4">
+          <p className="text-lg text-gray-500 mt-8 font-medium">
             You can safely close this tab now
           </p>
         </div>
