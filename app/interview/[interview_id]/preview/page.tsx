@@ -232,48 +232,52 @@ export default function PreviewPage({
             </div>
           </div>
 
-          {/* Recording Guidelines - MERGED SECTION */}
+          {/* Recording Guidelines - Simplified & Clear */}
           <div className="mb-8 p-6 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-300">
             <h3 className="text-lg font-semibold text-amber-900 mb-4 flex items-center">
               <svg className="w-5 h-5 text-amber-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Recording Guidelines
+              Important Guidelines
             </h3>
             
             <div className="space-y-4">
-              {/* Critical Rules */}
+              {/* Critical Rules - Simplified to 3 points */}
               <div>
-                <p className="font-semibold text-amber-900 mb-2 flex items-center">
+                <p className="font-semibold text-amber-900 mb-3 flex items-center">
                   <span className="mr-2">⚠️</span>
-                  Critical:
+                  Please Note:
                 </p>
-                <div className="space-y-2 text-amber-900 text-sm">
+                <div className="space-y-3 text-amber-900 text-sm">
                   <p className="flex items-start">
-                    <span className="text-amber-600 mr-2 font-bold">•</span>
-                    <span><strong>One recording per question</strong> - there are no retakes</span>
+                    <span className="text-amber-600 mr-2 font-bold text-base">•</span>
+                    <span><strong>Read each question carefully</strong> before you start recording</span>
                   </p>
                   <p className="flex items-start">
-                    <span className="text-amber-600 mr-2 font-bold">•</span>
-                    <span>Recording will <strong>begin automatically when the countdown reaches zero</strong>, but you can start earlier by clicking the record button if you're ready</span>
+                    <span className="text-amber-600 mr-2 font-bold text-base">•</span>
+                    <span><strong>One recording per question</strong> - you cannot re-record your answers</span>
                   </p>
                   <p className="flex items-start">
-                    <span className="text-amber-600 mr-2 font-bold">•</span>
-                    <span><strong>Read each question carefully</strong> before you begin recording</span>
+                    <span className="text-amber-600 mr-2 font-bold text-base">•</span>
+                    <span>Click <strong>"Next Question"</strong> to continue - you cannot go back to previous questions</span>
                   </p>
                 </div>
               </div>
 
               {/* Quick Tips */}
               <div className="pt-3 border-t border-amber-300">
-                <p className="font-semibold text-amber-900 mb-2 flex items-center">
+                <p className="font-semibold text-amber-900 mb-3 flex items-center">
                   <span className="mr-2">💡</span>
-                  Quick Tips:
+                  Tips for Success:
                 </p>
                 <div className="space-y-2 text-amber-900 text-sm">
                   <p className="flex items-start">
                     <span className="text-amber-600 mr-2">✓</span>
                     <span>Speak clearly and look directly at the camera</span>
+                  </p>
+                  <p className="flex items-start">
+                    <span className="text-amber-600 mr-2">✓</span>
+                    <span>Take your time to think before you start recording</span>
                   </p>
                   <p className="flex items-start">
                     <span className="text-amber-600 mr-2">✓</span>
