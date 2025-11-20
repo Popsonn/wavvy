@@ -228,9 +228,12 @@ export default function VideoRecorder({
       )}
 
       {recordedBlob && !isRecording && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center mt-4">
-          <p className="text-green-800 font-medium">
-            ✓ Recording complete! Click "Re-record" to try again, or "Next Question" to continue.
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center mt-4">
+          <p className="text-green-800 font-semibold flex items-center justify-center">
+            <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+            Answer recorded successfully!
           </p>
         </div>
       )}
