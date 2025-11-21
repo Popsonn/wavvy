@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 
 interface VideoRecorderProps {
   onRecordingComplete: (blob: Blob) => void;
-  maxDuration?: number;
+  maxDuration?: number; // default 180 seconds (3 mins)
   resetTrigger?: number;
 }
 
@@ -15,227 +15,196 @@ export default function VideoRecorder({
 }: VideoRecorderProps) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState('');
-  const [permissionGranted, setPermissionGranted] = useState(false);
-
-  useEffect(() => {
-    if (resetTrigger > 0) {
-      setRecordedBlob(null);
-      setRecordingTime(0);
-      setError('');
-      setIsRecording(false);
-    }
-  }, [resetTrigger]);
-
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Reset logic (Triggered when parent moves to next question)
   useEffect(() => {
-    async function setupCamera() {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: 'user'
-          },
-          audio: true
-        });
-
-        setStream(mediaStream);
-        setPermissionGranted(true);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-      } catch (err: any) {
-        if (err.name === 'NotAllowedError') {
-          setError('Camera/microphone access denied. Please allow access and refresh the page.');
-        } else if (err.name === 'NotFoundError') {
-          setError('No camera or microphone found. Please connect a device and refresh.');
-        } else {
-          setError('Failed to access camera/microphone. Please check your device settings.');
-        }
-      }
-    }
-
-    setupCamera();
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream]);
-
-  useEffect(() => {
-    if (recordingTime >= maxDuration && isRecording) {
-      stopRecording();
-    }
-  }, [recordingTime, maxDuration, isRecording]);
-
-  const startRecording = () => {
-    if (!stream) {
-      setError('Camera not ready. Please wait or refresh the page.');
-      return;
-    }
-
-    try {
-      chunksRef.current = [];
-      
-      let mimeType = 'video/webm;codecs=vp8,opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm';
-      }
-      
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-        setRecordedBlob(blob);
-        onRecordingComplete(blob);
-      };
-
-      mediaRecorder.start(100);
-      mediaRecorderRef.current = mediaRecorder;
-      setIsRecording(true);
+    if (resetTrigger > 0) {
+      setRecordedBlob(null);
       setRecordingTime(0);
+      setIsRecording(false);
+      setCountdown(null);
+      // Re-initialize stream if lost
+      if (!stream) initializeStream(); 
+    }
+  }, [resetTrigger]);
+
+  const initializeStream = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        audio: true
+      });
+      setStream(mediaStream);
+      if (videoRef.current) videoRef.current.srcObject = mediaStream;
       setError('');
-
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-    } catch (err: any) {
-      setError('Failed to start recording. Please try again.');
+    } catch (err) {
+      setError('Could not access camera/mic. Please check permissions.');
     }
   };
 
+  useEffect(() => {
+    initializeStream();
+    return () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    };
+  }, []);
+
+  // Ensure video element gets stream updates
+  useEffect(() => {
+    if (videoRef.current && stream) videoRef.current.srcObject = stream;
+  }, [stream]);
+
+  const handleStartClick = () => {
+    if (!stream) return;
+    setCountdown(3);
+    
+    let count = 3;
+    const interval = setInterval(() => {
+      count--;
+      if (count > 0) {
+        setCountdown(count);
+      } else {
+        clearInterval(interval);
+        setCountdown(null);
+        startRecordingActual();
+      }
+    }, 1000);
+  };
+
+  const startRecordingActual = () => {
+    if (!stream) return;
+    
+    chunksRef.current = [];
+    
+    // SAFARI/IPHONE FIX: Check supported types
+    const mimeTypes = [
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4'
+    ];
+    const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || '';
+
+    if (!mimeType) {
+        setError('Browser recording not supported.');
+        return;
+    }
+
+    const recorder = new MediaRecorder(stream, { mimeType });
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      setRecordedBlob(blob);
+      onRecordingComplete(blob);
+    };
+
+    recorder.start(1000); 
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true);
+    
+    timerRef.current = setInterval(() => {
+      setRecordingTime(prev => {
+        if (prev >= maxDuration) {
+            stopRecording();
+            return prev;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+  };
+
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (error && !permissionGranted) {
-    return (
-      <div className="w-full bg-red-50 border-2 border-red-200 rounded-lg p-8 text-center">
-        <div className="text-red-600 text-5xl mb-4">📹</div>
-        <h3 className="text-xl font-semibold text-red-900 mb-2">Camera Access Required</h3>
-        <p className="text-red-700 mb-4">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          Refresh Page
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full h-full flex flex-col">
-      <div className="relative w-full flex-1 bg-gray-900 rounded-lg overflow-hidden min-h-[300px]">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full h-full object-cover"
-        />
-        
-        {isRecording && (
-          <div className="absolute top-4 left-4 flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-full animate-pulse">
-            <div className="w-3 h-3 bg-white rounded-full"></div>
-            <span className="font-semibold">Recording</span>
-          </div>
-        )}
+    <div className="relative w-full h-full bg-black rounded-xl overflow-hidden shadow-2xl group">
+      {/* Video Feed */}
+      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
 
-        {isRecording && (
-          <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-4 py-2 rounded-full font-mono text-lg">
-            {formatTime(recordingTime)} / {formatTime(maxDuration)}
-          </div>
-        )}
-
-        {!stream && !error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-90">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-              <p className="text-white">Initializing camera...</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex justify-center space-x-4 mt-4">
-        {!isRecording && !recordedBlob && (
-          <button
-            onClick={startRecording}
-            disabled={!stream}
-            className="px-8 py-4 bg-red-600 text-white text-lg font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2"
-          >
-            <div className="w-4 h-4 bg-white rounded-full"></div>
-            <span>Start Recording</span>
-          </button>
-        )}
-
-        {isRecording && (
-          <button
-            onClick={stopRecording}
-            className="px-8 py-4 bg-gray-800 text-white text-lg font-semibold rounded-lg hover:bg-gray-900 transition-colors flex items-center space-x-2"
-          >
-            <div className="w-4 h-4 bg-white"></div>
-            <span>Stop Recording</span>
-          </button>
-        )}
-      </div>
-
-      {error && permissionGranted && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm text-center mt-4">
-          {error}
+      {/* ERROR OVERLAY */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-50">
+           <div className="text-white text-center p-4">
+             <p className="text-red-400 text-lg mb-2">⚠️ {error}</p>
+             <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white text-black rounded-full">Retry</button>
+           </div>
         </div>
       )}
 
-      {recordedBlob && !isRecording && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center mt-4">
-          <p className="text-green-800 font-semibold flex items-center justify-center">
-            <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-            Answer recorded successfully!
-          </p>
+      {/* COUNTDOWN OVERLAY */}
+      {countdown !== null && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40">
+          <span className="text-9xl font-bold text-white animate-bounce">{countdown}</span>
         </div>
+      )}
+
+      {/* STATUS OVERLAYS */}
+      <div className="absolute top-4 right-4 flex items-center gap-3 z-30">
+        {isRecording && (
+            <div className="bg-red-500/90 text-white px-3 py-1 rounded-full flex items-center gap-2 animate-pulse">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="text-sm font-bold">REC</span>
+            </div>
+        )}
+        <div className="bg-black/60 text-white px-3 py-1 rounded-full font-mono text-sm border border-white/20">
+            {formatTime(recordingTime)} / {formatTime(maxDuration)}
+        </div>
+      </div>
+
+      {/* COMPLETED STATE OVERLAY */}
+      {recordedBlob && !isRecording && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center z-40 text-white">
+          <div className="bg-green-500 rounded-full p-4 mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-bold">Answer Recorded</h3>
+          <p className="text-gray-300 mb-6">Recording saved. Click "Next" to continue.</p>
+        </div>
+      )}
+
+      {/* CONTROLS */}
+      {!isRecording && !recordedBlob && !countdown && (
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center z-50">
+          <button onClick={handleStartClick} disabled={!stream} 
+            className="group/btn flex items-center gap-3 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+             <div className="w-4 h-4 bg-white rounded-full group-hover/btn:animate-pulse"></div>
+             Start Answer
+          </button>
+        </div>
+      )}
+      
+      {/* Stop Button - Subtle Bottom-Right Corner */}
+      {isRecording && (
+        <button onClick={stopRecording} 
+          className="absolute bottom-4 right-4 flex items-center gap-2 bg-gray-800/80 hover:bg-gray-900 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all hover:scale-105 z-50">
+           <div className="w-2.5 h-2.5 bg-red-500 rounded-sm"></div>
+           Stop
+        </button>
       )}
     </div>
   );
