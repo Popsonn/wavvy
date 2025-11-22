@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import VideoRecorder from '@/components/VideoRecorder'; // Ensure you use the updated one we discussed
+import VideoRecorder from '@/components/VideoRecorder';
 
 interface InterviewData {
   job_title: string;
@@ -37,7 +37,7 @@ export default function RecordPage({
   const [backgroundUploadError, setBackgroundUploadError] = useState('');
   const [resetTrigger, setResetTrigger] = useState(0);
   
-  // NEW: Total Interview Timer State
+  // Total Interview Timer State
   const [totalSeconds, setTotalSeconds] = useState(0);
 
   useEffect(() => {
@@ -45,6 +45,17 @@ export default function RecordPage({
       router.push(`/interview/${interview_id}/register`);
     }
   }, [candidateId, interview_id, router]);
+
+  // --- 1. Prevent Browser Back Button (Silent Prevention) ---
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+      // Silent prevention - no alert, just block navigation
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Total Interview Timer Logic
   useEffect(() => {
@@ -91,11 +102,18 @@ export default function RecordPage({
     setBackgroundUploadError('');
   };
 
-  // ❌ DELETED: handleReRecord function (Client requirement: No re-recording)
-
+  // --- 2. UPDATED: Upload Logic with Enhanced Safari/QuickTime Support ---
   const uploadVideo = async (blob: Blob, originalQuestionIndex: number): Promise<boolean> => {
     try {
-      const filename = `interviews/${interview_id}/${candidateId}/question-${originalQuestionIndex}.webm`;
+      // Detect file extension based on Blob MIME type
+      // Safari typically produces 'video/mp4', while Chrome/Firefox produce 'video/webm'
+      // Some older Safari versions may use 'video/quicktime'
+      const fileExtension = blob.type.includes('mp4') || blob.type.includes('quicktime') 
+        ? 'mp4' 
+        : 'webm';
+      
+      const filename = `interviews/${interview_id}/${candidateId}/question-${originalQuestionIndex}.${fileExtension}`;
+      
       const { upload } = await import('@vercel/blob/client');
       
       const newBlob = await upload(filename, blob, {
@@ -108,7 +126,8 @@ export default function RecordPage({
       return true;
     } catch (err) {
       console.error('Upload error:', err);
-      setBackgroundUploadError(err instanceof Error ? err.message : 'Upload failed');
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      setBackgroundUploadError(message);
       return false;
     }
   };
@@ -145,7 +164,7 @@ export default function RecordPage({
       setCurrentQuestionIndex(prev => prev + 1);
       setRecordedBlob(null);
       setUploading(false);
-      setResetTrigger(prev => prev + 1); // Resets the recorder for next Q
+      setResetTrigger(prev => prev + 1);
     }
   };
 
@@ -159,14 +178,14 @@ export default function RecordPage({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col h-screen overflow-hidden">
       
-      {/* 1. Header: Compact & Contains Total Timer */}
+      {/* Header: Compact & Contains Total Timer */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center h-16 shrink-0">
         <div>
            <h1 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{interview.job_title}</h1>
            <p className="text-xs text-gray-400">Candidate ID: {candidateId?.slice(0,8)}</p>
         </div>
         
-        {/* NEW: Total Timer Display */}
+        {/* Total Timer Display */}
         <div className="flex items-center space-x-4">
           <div className="bg-gray-100 px-3 py-1 rounded-md border border-gray-200 flex items-center gap-2">
              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -179,7 +198,7 @@ export default function RecordPage({
         </div>
       </header>
 
-      {/* 2. Main Layout: Fixed Grid (Question Left, Video Right) */}
+      {/* Main Layout: Fixed Grid (Question Left, Video Right) */}
       <main className="flex-1 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
          
          {/* Question Panel */}
@@ -210,7 +229,7 @@ export default function RecordPage({
          </div>
       </main>
 
-      {/* 3. Footer: NO EXIT BUTTON, NO RE-RECORD BUTTON */}
+      {/* Footer: NO EXIT BUTTON, NO RE-RECORD BUTTON */}
       <footer className="bg-white border-t border-gray-200 p-4 shrink-0 z-50">
          <div className="max-w-7xl mx-auto flex justify-end items-center">
             
