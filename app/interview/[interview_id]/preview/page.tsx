@@ -65,13 +65,18 @@ export default function PreviewPage({
         setStream(mediaStream);
         setPermissionGranted(true);
         if (videoRef.current) videoRef.current.srcObject = mediaStream;
+        setError(''); // Clear any previous errors on success
       } catch (err: any) {
-        if (err.name === 'NotAllowedError') {
-          setError('Camera/microphone access denied. Please allow access to continue.');
+        console.error("Preview Camera Error:", err.name, err.message);
+
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setError('Camera/microphone access denied. Please click the lock icon in your browser address bar to allow access.');
         } else if (err.name === 'NotFoundError') {
           setError('No camera or microphone found. Please connect a device.');
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          setError('Camera is in use by another app (like Zoom/Teams) or blocked by macOS System Settings. Please close other apps and check System Settings > Privacy.');
         } else {
-          setError('Failed to access camera/microphone. Please check your device settings.');
+          setError(`System Error: ${err.message || 'Failed to access camera/microphone'}`);
         }
       }
     }
@@ -166,17 +171,18 @@ export default function PreviewPage({
                 </div>
               )}
 
-              {/* Error Overlay - Set 1's Error Handling */}
+              {/* Error Overlay - Enhanced Production Version */}
               {error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-red-900 bg-opacity-90">
-                  <div className="text-center px-6">
-                    <div className="text-white text-5xl mb-4">📹</div>
-                    <p className="text-white font-medium mb-4">{error}</p>
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95 p-6 z-30">
+                  <div className="text-center max-w-md">
+                    <div className="text-red-500 text-5xl mb-4">⚠️</div>
+                    <h3 className="text-white font-bold text-lg mb-2">Camera Access Failed</h3>
+                    <p className="text-gray-300 text-sm leading-relaxed mb-6">{error}</p>
                     <button
                       onClick={() => window.location.reload()}
-                      className="px-4 py-2 bg-white text-red-900 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                      className="px-6 py-3 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors font-medium"
                     >
-                      Refresh Page
+                      Try Again
                     </button>
                   </div>
                 </div>

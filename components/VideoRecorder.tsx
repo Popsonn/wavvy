@@ -46,8 +46,18 @@ export default function VideoRecorder({
       setStream(mediaStream);
       if (videoRef.current) videoRef.current.srcObject = mediaStream;
       setError('');
-    } catch (err) {
-      setError('Could not access camera/mic. Please check permissions.');
+    } catch (err: any) {
+      console.error("Camera Setup Error:", err.name, err.message);
+
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('Camera/microphone access denied. Please click the lock icon in your browser address bar to allow access.');
+      } else if (err.name === 'NotFoundError') {
+        setError('No camera or microphone found. Please connect a device.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setError('Camera is in use by another app (like Zoom/Teams) or blocked by macOS System Settings. Please close other apps and check System Settings > Privacy.');
+      } else {
+        setError(`System Error: ${err.message || 'Failed to access camera/microphone'}`);
+      }
     }
   };
 
@@ -144,12 +154,19 @@ export default function VideoRecorder({
       {/* Video Feed */}
       <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
 
-      {/* ERROR OVERLAY */}
+      {/* ERROR OVERLAY - Enhanced with Better Messages */}
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-50">
-           <div className="text-white text-center p-4">
-             <p className="text-red-400 text-lg mb-2">⚠️ {error}</p>
-             <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white text-black rounded-full">Retry</button>
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95 z-50 p-4">
+           <div className="text-white text-center max-w-md">
+             <div className="text-5xl mb-4">⚠️</div>
+             <h3 className="text-xl font-bold mb-2">Camera Issue</h3>
+             <p className="text-gray-300 mb-6 text-sm leading-relaxed">{error}</p>
+             <button 
+               onClick={() => window.location.reload()} 
+               className="px-6 py-3 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors font-medium"
+             >
+               Reload Page
+             </button>
            </div>
         </div>
       )}
