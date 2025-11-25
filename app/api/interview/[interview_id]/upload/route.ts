@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import { saveRecording, getCandidate } from '@/lib/db';
+import { saveRecording, getCandidate, getRecordings } from '@/lib/db';
 
 export const runtime = 'nodejs';
-// Increase duration for slower connections
-export const maxDuration = 60; 
+export const maxDuration = 60;
 
 export async function POST(
   req: NextRequest,
@@ -18,7 +17,6 @@ export async function POST(
       body,
       request: req,
       onBeforeGenerateToken: async (pathname) => {
-        // 1. Validate candidate exists
         const { searchParams } = new URL(req.url);
         const candidateId = searchParams.get('candidate_id');
         const questionIndex = searchParams.get('question_index');
@@ -28,15 +26,12 @@ export async function POST(
         const candidate = await getCandidate(interview_id, candidateId);
         if (!candidate) throw new Error('Candidate not found');
 
-        // 2. SECURITY: Validate Content Types
-        // We allow webm (Chrome/Firefox) and mp4 (Safari/iOS)
-        // We also allow the detailed codec versions
         return {
           allowedContentTypes: [
-            'video/webm', 
-            'video/mp4', 
-            'video/webm;codecs=vp8,opus', 
-            'video/quicktime' // Sometimes iOS sends this
+            'video/webm',
+            'video/mp4',
+            'video/webm;codecs=vp8,opus',
+            'video/quicktime'
           ],
           tokenPayload: JSON.stringify({
             interview_id,
@@ -48,8 +43,7 @@ export async function POST(
       onUploadCompleted: async ({ blob, tokenPayload }) => {
         try {
           const payload = JSON.parse(tokenPayload || '{}');
-          
-          // 3. Save to Database
+
           await saveRecording(
             payload.interview_id,
             payload.candidate_id,
@@ -60,11 +54,10 @@ export async function POST(
               uploaded_at: new Date().toISOString(),
             }
           );
-          
-          console.log(`[Upload Success] Saved ${blob.url} for candidate ${payload.candidate_id}`);
+
+          console.log(`Upload completed: ${blob.url}`);
         } catch (error) {
-          // Crucial: Log this error. If DB save fails, we have an orphaned video file.
-          console.error('Failed to save recording metadata to DB:', error);
+          console.error('Failed to save recording metadata:', error);
         }
       },
     });
@@ -79,27 +72,24 @@ export async function POST(
   }
 }
 
-// GET method remains the same...
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ interview_id: string }> }
 ) {
-    // ... (Your existing GET code is fine)
-    try {
+  try {
     const { interview_id } = await params;
     const { searchParams } = new URL(req.url);
     const candidateId = searchParams.get('candidate_id');
- 
+
     if (!candidateId) {
       return NextResponse.json(
         { error: 'candidate_id query parameter is required' },
         { status: 400 }
       );
     }
- 
-    const { getRecordings } = await import('@/lib/db');
+
     const recordings = await getRecordings(interview_id, candidateId);
- 
+
     return NextResponse.json({ recordings });
   } catch (error: any) {
     console.error('Get recordings error:', error);

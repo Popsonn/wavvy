@@ -59,12 +59,10 @@ export async function POST(
       );
     }
 
-    // CHECK FOR INCOMPLETE INTERVIEW
     const expectedCount = interview.questions.length;
     const actualCount = recordings.length;
 
     if (actualCount < expectedCount) {
-      // Identify missing questions
       const missing = [];
       for (let i = 0; i < expectedCount; i++) {
         const hasRecording = recordings.some(r => r.question_index === i);
@@ -74,12 +72,11 @@ export async function POST(
       }
       
       console.warn(
-        `⚠️ INCOMPLETE INTERVIEW - Interview: ${interview_id}, ` +
+        `Incomplete interview - Interview: ${interview_id}, ` +
         `Candidate: ${candidate_id} (${candidate.name}), ` +
         `Missing Q${missing.join(', Q')}`
       );
       
-      // Return error with detailed info
       return NextResponse.json({
         error: 'Incomplete interview',
         message: `This interview is missing recordings for ${missing.length} question(s).`,
@@ -147,7 +144,7 @@ export async function POST(
         }),
       });
     } catch (emailError) {
-      // Non-blocking: email failure doesn't stop processing
+      console.error('Failed to send candidate confirmation email:', emailError);
     }
 
     let sheetUrl = '';
@@ -171,6 +168,7 @@ export async function POST(
         }
       );
     } catch (sheetsError) {
+      console.error('Failed to export to Google Sheets:', sheetsError);
       sheetUrl = 'https://sheets.google.com';
     }
 
@@ -189,7 +187,7 @@ export async function POST(
         recruiterEmail,
       });
     } catch (emailError) {
-      // Non-blocking: email failure doesn't stop processing
+      console.error('Failed to send recruiter results email:', emailError);
     }
 
     return NextResponse.json({

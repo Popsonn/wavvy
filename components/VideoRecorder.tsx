@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 
 interface VideoRecorderProps {
   onRecordingComplete: (blob: Blob) => void;
-  maxDuration?: number; // default 180 seconds (3 mins)
+  maxDuration?: number;
   resetTrigger?: number;
 }
 
@@ -25,14 +25,12 @@ export default function VideoRecorder({
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reset logic (Triggered when parent moves to next question)
   useEffect(() => {
     if (resetTrigger > 0) {
       setRecordedBlob(null);
       setRecordingTime(0);
       setIsRecording(false);
       setCountdown(null);
-      // Re-initialize stream if lost
       if (!stream) initializeStream(); 
     }
   }, [resetTrigger]);
@@ -68,7 +66,6 @@ export default function VideoRecorder({
     };
   }, []);
 
-  // Ensure video element gets stream updates
   useEffect(() => {
     if (videoRef.current && stream) videoRef.current.srcObject = stream;
   }, [stream]);
@@ -95,7 +92,6 @@ export default function VideoRecorder({
     
     chunksRef.current = [];
     
-    // SAFARI/IPHONE FIX: Check supported types
     const mimeTypes = [
         'video/webm;codecs=vp8,opus',
         'video/webm',
@@ -151,10 +147,8 @@ export default function VideoRecorder({
 
   return (
     <div className="relative w-full h-full bg-black rounded-xl overflow-hidden shadow-2xl group">
-      {/* Video Feed */}
       <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
 
-      {/* ERROR OVERLAY - Enhanced with Better Messages */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95 z-50 p-4">
            <div className="text-white text-center max-w-md">
@@ -171,14 +165,12 @@ export default function VideoRecorder({
         </div>
       )}
 
-      {/* COUNTDOWN OVERLAY */}
       {countdown !== null && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40">
           <span className="text-9xl font-bold text-white animate-bounce">{countdown}</span>
         </div>
       )}
 
-      {/* STATUS OVERLAYS */}
       <div className="absolute top-4 right-4 flex items-center gap-3 z-30">
         {isRecording && (
             <div className="bg-red-500/90 text-white px-3 py-1 rounded-full flex items-center gap-2 animate-pulse">
@@ -191,7 +183,6 @@ export default function VideoRecorder({
         </div>
       </div>
 
-      {/* COMPLETED STATE OVERLAY */}
       {recordedBlob && !isRecording && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center z-40 text-white">
           <div className="bg-green-500 rounded-full p-4 mb-4">
@@ -204,7 +195,6 @@ export default function VideoRecorder({
         </div>
       )}
 
-      {/* CONTROLS */}
       {!isRecording && !recordedBlob && !countdown && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center z-50">
           <button onClick={handleStartClick} disabled={!stream} 
@@ -215,7 +205,6 @@ export default function VideoRecorder({
         </div>
       )}
       
-      {/* Stop Button - Subtle Bottom-Right Corner */}
       {isRecording && (
         <button onClick={stopRecording} 
           className="absolute bottom-4 right-4 flex items-center gap-2 bg-gray-800/80 hover:bg-gray-900 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all hover:scale-105 z-50">

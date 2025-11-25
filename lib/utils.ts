@@ -1,7 +1,5 @@
 /**
- * Fisher-Yates shuffle algorithm for unbiased random array shuffling
- * More reliable than Array.sort(() => Math.random() - 0.5)
- * 
+ * Fisher-Yates shuffle algorithm for unbiased random shuffling.
  * @param array - Array to shuffle
  * @returns New shuffled array (does not mutate original)
  */
@@ -15,14 +13,10 @@ export function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Generate randomized question order for anti-cheating
- * Returns an array of indices in random order
- * 
+ * Generate randomized question order for anti-cheating.
  * @param questionCount - Total number of questions
- * @returns Array of shuffled indices [0, 1, 2, ...] in random order
- * 
- * @example
- * generateQuestionOrder(5) // might return [2, 0, 4, 1, 3]
+ * @returns Array of shuffled indices
+ * @example generateQuestionOrder(5) // [2, 0, 4, 1, 3]
  */
 export function generateQuestionOrder(questionCount: number): number[] {
   const indices = Array.from({ length: questionCount }, (_, i) => i);

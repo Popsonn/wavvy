@@ -56,7 +56,6 @@ export async function POST(
       );
     }
 
-    // Validate consent
     if (!consent_given) {
       return NextResponse.json(
         { error: "Consent to recording is required" },
@@ -65,8 +64,6 @@ export async function POST(
     }
 
     const candidateId = crypto.randomUUID().slice(0, 12);
-
-    // Generate randomized question order for anti-cheating
     const questionOrder = generateQuestionOrder(interview.questions.length);
 
     const candidateData = {

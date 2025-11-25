@@ -29,14 +29,12 @@ export default function PreviewPage({
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Redirect if no candidate_id
   useEffect(() => {
     if (!candidateId) {
       router.push(`/interview/${interview_id}/register`);
     }
   }, [candidateId, interview_id, router]);
 
-  // Fetch interview data
   useEffect(() => {
     async function fetchInterview() {
       try {
@@ -53,7 +51,6 @@ export default function PreviewPage({
     if (candidateId) fetchInterview();
   }, [interview_id, candidateId]);
 
-  // Setup camera
   useEffect(() => {
     async function setupCamera() {
       try {
@@ -65,7 +62,7 @@ export default function PreviewPage({
         setStream(mediaStream);
         setPermissionGranted(true);
         if (videoRef.current) videoRef.current.srcObject = mediaStream;
-        setError(''); // Clear any previous errors on success
+        setError('');
       } catch (err: any) {
         console.error("Preview Camera Error:", err.name, err.message);
 
@@ -95,7 +92,6 @@ export default function PreviewPage({
     router.push(`/interview/${interview_id}/record?candidate_id=${candidateId}`);
   };
 
-  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -107,7 +103,6 @@ export default function PreviewPage({
     );
   }
 
-  // Error State (no interview loaded)
   if (error && !interview) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4">
@@ -131,14 +126,12 @@ export default function PreviewPage({
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] rounded-xl shadow-lg p-8 mb-8 text-center">
           <h1 className="text-3xl font-semibold text-white mb-2">{interview?.job_title}</h1>
           <p className="text-white/90 text-lg">Camera & Microphone Check</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-8">
-          {/* Camera Preview Section */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Camera Preview</h2>
             
@@ -151,7 +144,6 @@ export default function PreviewPage({
                 className="w-full h-full object-cover transform scale-x-[-1]"
               />
               
-              {/* AudioVisualizer Overlay - Set 2's Innovation */}
               {permissionGranted && stream && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-2/3 z-20">
                    <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 border border-white/10">
@@ -161,7 +153,6 @@ export default function PreviewPage({
                 </div>
               )}
 
-              {/* Loading State */}
               {!stream && !error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-800/90">
                   <div className="text-center">
@@ -171,7 +162,6 @@ export default function PreviewPage({
                 </div>
               )}
 
-              {/* Error Overlay - Enhanced Production Version */}
               {error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95 p-6 z-30">
                   <div className="text-center max-w-md">
@@ -188,7 +178,6 @@ export default function PreviewPage({
                 </div>
               )}
 
-              {/* System Ready Badge - Set 2's Confidence */}
               {permissionGranted && (
                 <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2">
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
@@ -197,7 +186,6 @@ export default function PreviewPage({
               )}
             </div>
 
-            {/* Success Confirmation - Set 1's Reassurance */}
             {permissionGranted && (
               <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
                 <p className="text-green-800 text-sm font-medium">
@@ -207,9 +195,7 @@ export default function PreviewPage({
             )}
           </div>
 
-          {/* Info Grid - Set 2's Clean Layout */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {/* Quick Overview - Set 2's Approach */}
             <div className="p-6 bg-blue-50 rounded-lg border border-blue-100">
               <h3 className="font-bold text-blue-900 mb-3 flex items-center">
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +209,6 @@ export default function PreviewPage({
               </ul>
             </div>
             
-            {/* Important Guidelines - Balanced Visual Weight */}
             <div className="p-6 bg-amber-50 rounded-lg border border-amber-100">
               <h3 className="font-bold text-amber-900 mb-3 flex items-center">
                 <span className="mr-2">⚠️</span>
@@ -240,7 +225,6 @@ export default function PreviewPage({
             </div>
           </div>
 
-          {/* Continue Button - Set 2's Personal CTA */}
           <div className="text-center">
             <button
               onClick={handleContinue}
@@ -252,7 +236,6 @@ export default function PreviewPage({
           </div>
         </div>
 
-        {/* Back Link - Set 1's Navigation Safety */}
         <div className="text-center mt-6">
           <a
             href={`/interview/${interview_id}/register`}

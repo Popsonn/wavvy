@@ -36,8 +36,6 @@ export default function RecordPage({
   const [uploadedCount, setUploadedCount] = useState(0);
   const [backgroundUploadError, setBackgroundUploadError] = useState('');
   const [resetTrigger, setResetTrigger] = useState(0);
-  
-  // Total Interview Timer State
   const [totalSeconds, setTotalSeconds] = useState(0);
 
   useEffect(() => {
@@ -46,18 +44,15 @@ export default function RecordPage({
     }
   }, [candidateId, interview_id, router]);
 
-  // --- 1. Prevent Browser Back Button (Silent Prevention) ---
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, '', window.location.href);
-      // Silent prevention - no alert, just block navigation
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Total Interview Timer Logic
   useEffect(() => {
     const timer = setInterval(() => {
       setTotalSeconds(prev => prev + 1);
@@ -102,12 +97,8 @@ export default function RecordPage({
     setBackgroundUploadError('');
   };
 
-  // --- 2. UPDATED: Upload Logic with Enhanced Safari/QuickTime Support ---
   const uploadVideo = async (blob: Blob, originalQuestionIndex: number): Promise<boolean> => {
     try {
-      // Detect file extension based on Blob MIME type
-      // Safari typically produces 'video/mp4', while Chrome/Firefox produce 'video/webm'
-      // Some older Safari versions may use 'video/quicktime'
       const fileExtension = blob.type.includes('mp4') || blob.type.includes('quicktime') 
         ? 'mp4' 
         : 'webm';
@@ -143,7 +134,6 @@ export default function RecordPage({
     const originalQuestionIndex = questionOrder[currentQuestionIndex];
     const isLastQuestion = currentQuestionIndex >= questionOrder.length - 1;
 
-    // Trigger upload
     const uploadPromise = uploadVideo(currentBlob, originalQuestionIndex);
 
     if (isLastQuestion) {
@@ -155,12 +145,10 @@ export default function RecordPage({
         setUploading(false);
       }
     } else {
-      // Background upload for non-final questions
       uploadPromise.catch(() => 
         setBackgroundUploadError(`Question ${currentQuestionIndex + 1} failed to upload.`)
       );
 
-      // Move to next question immediately
       setCurrentQuestionIndex(prev => prev + 1);
       setRecordedBlob(null);
       setUploading(false);
@@ -177,15 +165,12 @@ export default function RecordPage({
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col h-screen overflow-hidden">
-      
-      {/* Header: Compact & Contains Total Timer */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center h-16 shrink-0">
         <div>
            <h1 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{interview.job_title}</h1>
            <p className="text-xs text-gray-400">Candidate ID: {candidateId?.slice(0,8)}</p>
         </div>
         
-        {/* Total Timer Display */}
         <div className="flex items-center space-x-4">
           <div className="bg-gray-100 px-3 py-1 rounded-md border border-gray-200 flex items-center gap-2">
              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -198,10 +183,7 @@ export default function RecordPage({
         </div>
       </header>
 
-      {/* Main Layout: Fixed Grid (Question Left, Video Right) */}
       <main className="flex-1 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
-         
-         {/* Question Panel */}
          <div className="lg:w-1/3 flex flex-col bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
                <h2 className="text-xs font-bold text-blue-800 uppercase mb-1">Current Question</h2>
@@ -218,7 +200,6 @@ export default function RecordPage({
             </div>
          </div>
 
-         {/* Recorder Panel */}
          <div className="lg:w-2/3 bg-black rounded-xl overflow-hidden shadow-lg relative">
             <VideoRecorder 
               key={currentQuestionIndex}
@@ -229,11 +210,8 @@ export default function RecordPage({
          </div>
       </main>
 
-      {/* Footer: NO EXIT BUTTON, NO RE-RECORD BUTTON */}
       <footer className="bg-white border-t border-gray-200 p-4 shrink-0 z-50">
          <div className="max-w-7xl mx-auto flex justify-end items-center">
-            
-            {/* Only the Next/Submit Button exists */}
             <button
               onClick={handleNext}
               disabled={!recordedBlob || uploading}
@@ -253,7 +231,6 @@ export default function RecordPage({
          </div>
       </footer>
 
-      {/* Error Toasts */}
       {(error || backgroundUploadError) && (
         <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-lg z-50">
           <p>{error || backgroundUploadError}</p>

@@ -79,7 +79,7 @@ async function ensureHeaders(sheets: any, spreadsheetId: string): Promise<void> 
       return;
     }
   } catch (error) {
-    // Headers don't exist, will create them
+    // Continue to create headers
   }
   
   await sheets.spreadsheets.values.update({
