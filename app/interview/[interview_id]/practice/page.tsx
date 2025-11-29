@@ -195,44 +195,52 @@ export default function PreviewPage({
             )}
           </div>
 
+          {/* UPDATED: Two-column layout with Practice Mode callout and Interview Rules */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
-            <div className="p-6 bg-blue-50 rounded-lg border border-blue-100">
-              <h3 className="font-bold text-blue-900 mb-3 flex items-center">
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Quick Overview
+            {/* Left Column: Practice Mode Callout */}
+            <div className="p-6 bg-emerald-50 rounded-lg border-2 border-emerald-200">
+              <h3 className="font-bold text-emerald-900 mb-3 flex items-center">
+                <span className="text-xl mr-2">👉</span>
+                First Step: Practice Mode
               </h3>
-              <ul className="space-y-2 text-blue-800 text-sm">
-                <li>• <strong>{questionCount} questions</strong> total</li>
-                <li>• <strong>3 minutes</strong> max per answer</li>
-              </ul>
+              <p className="text-emerald-800 text-sm leading-relaxed mb-3">
+                You will answer <strong>one ungraded practice question</strong> to get comfortable with the recording controls before the real interview begins.
+              </p>
+              <div className="p-3 bg-emerald-100/50 rounded text-xs text-emerald-700">
+                💡 Use this to check your lighting, audio levels, and camera angle.
+              </div>
             </div>
             
+            {/* Right Column: Interview Rules */}
             <div className="p-6 bg-amber-50 rounded-lg border border-amber-100">
               <h3 className="font-bold text-amber-900 mb-3 flex items-center">
                 <span className="mr-2">⚠️</span>
-                Important Guidelines
+                Real Interview Rules
               </h3>
-              <p className="text-amber-900 mb-3 text-sm font-medium">
-                Please Note:
-              </p>
               <ul className="space-y-2 text-amber-800 text-sm">
-                <li>• <strong>Read each question carefully</strong> before recording</li>
-                <li>• <strong>No Re-recording:</strong> First take only</li>
-                <li>• <strong>No Back Button:</strong> Stay in the flow</li>
+                <li>• <strong>{questionCount} questions</strong> total</li>
+                <li>• <strong>3 minutes</strong> max per answer</li>
+                <li>• <strong>No re-recording</strong> once started</li>
+                <li>• <strong>No back button</strong> - stay in flow</li>
               </ul>
             </div>
           </div>
 
+          {/* UPDATED: Button with clear messaging */}
           <div className="text-center">
             <button
               onClick={handleContinue}
               disabled={!permissionGranted}
               className="w-full md:w-auto px-12 py-4 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {permissionGranted ? 'I am Ready - Start Interview' : 'Waiting for camera access...'}
+              {permissionGranted ? 'Continue to Practice Mode →' : 'Waiting for camera access...'}
             </button>
+            
+            {permissionGranted && (
+              <p className="mt-4 text-sm text-gray-500">
+                You won't be graded yet. This is just a system check.
+              </p>
+            )}
           </div>
         </div>
 

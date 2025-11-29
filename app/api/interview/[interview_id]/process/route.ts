@@ -44,6 +44,7 @@ export async function POST(
     }
 
     const interview = await getInterview(interview_id);
+    
     if (!interview) {
       return NextResponse.json(
         { error: 'Interview not found' },
@@ -52,6 +53,7 @@ export async function POST(
     }
 
     const recordings = await getRecordings(interview_id, candidate_id);
+    
     if (!recordings || recordings.length === 0) {
       return NextResponse.json(
         { error: 'No recordings found' },
@@ -201,6 +203,7 @@ export async function POST(
       },
     });
   } catch (error) {
+    console.error('Process route error:', error);
     const message = error instanceof Error ? error.message : 'Failed to process interview';
     return NextResponse.json(
       { 

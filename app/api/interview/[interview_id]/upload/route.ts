@@ -54,8 +54,6 @@ export async function POST(
               uploaded_at: new Date().toISOString(),
             }
           );
-
-          console.log(`Upload completed: ${blob.url}`);
         } catch (error) {
           console.error('Failed to save recording metadata:', error);
         }

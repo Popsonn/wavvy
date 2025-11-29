@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import VideoRecorder from '@/components/VideoRecorder';
 
@@ -36,7 +36,8 @@ export default function RecordPage({
   const [uploadedCount, setUploadedCount] = useState(0);
   const [backgroundUploadError, setBackgroundUploadError] = useState('');
   const [resetTrigger, setResetTrigger] = useState(0);
-  const [totalSeconds, setTotalSeconds] = useState(0);
+  const [remainingGlobalTime, setRemainingGlobalTime] = useState<number | null>(null);
+  const globalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!candidateId) {
@@ -54,13 +55,37 @@ export default function RecordPage({
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTotalSeconds(prev => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (interview && remainingGlobalTime === null) {
+      const TIME_PER_QUESTION = 300;
+      const totalTime = interview.questions.length * TIME_PER_QUESTION;
+      setRemainingGlobalTime(totalTime);
+    }
 
-  const formatTotalTime = (seconds: number) => {
+    if (remainingGlobalTime !== null && remainingGlobalTime > 0) {
+      globalTimerRef.current = setInterval(() => {
+        setRemainingGlobalTime(prev => {
+          if (prev === null || prev <= 0) {
+            if (globalTimerRef.current) clearInterval(globalTimerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (globalTimerRef.current) clearInterval(globalTimerRef.current);
+    };
+  }, [interview, remainingGlobalTime]);
+
+  useEffect(() => {
+    if (remainingGlobalTime === 0) {
+      router.push(`/interview/${interview_id}/complete?candidate_id=${candidateId}&reason=timeout`);
+    }
+  }, [remainingGlobalTime, router, interview_id, candidateId]);
+
+  const formatTime = (seconds: number | null) => {
+    if (seconds === null) return "--:--";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -162,6 +187,7 @@ export default function RecordPage({
   const questionOrder = candidate.question_order || Array.from({ length: interview.questions.length }, (_, i) => i); 
   const currentQuestion = interview.questions[questionOrder[currentQuestionIndex]];
   const totalQuestions = questionOrder.length;
+  const isTimeRunningLow = remainingGlobalTime !== null && remainingGlobalTime < 120;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col h-screen overflow-hidden">
@@ -173,8 +199,10 @@ export default function RecordPage({
         
         <div className="flex items-center space-x-4">
           <div className="bg-gray-100 px-3 py-1 rounded-md border border-gray-200 flex items-center gap-2">
-             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-             <span className="font-mono text-gray-700 font-medium">{formatTotalTime(totalSeconds)}</span>
+             <div className={`w-2 h-2 rounded-full ${isTimeRunningLow ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+             <span className={`font-mono font-medium transition-colors duration-300 ${isTimeRunningLow ? 'text-red-600 font-bold animate-pulse' : 'text-gray-700'}`}>
+               {formatTime(remainingGlobalTime)}
+             </span>
           </div>
           <div className="text-right">
              <span className="text-xl font-bold text-[#667eea]">{currentQuestionIndex + 1}</span>
