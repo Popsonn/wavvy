@@ -13,7 +13,7 @@
     "@vercel/kv": "^3.0.0",
     "googleapis": "^165.0.0",
     "groq-sdk": "^0.34.0",
-    "next": "16.0.1",
+    "next": "16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "resend": "^6.4.2"
